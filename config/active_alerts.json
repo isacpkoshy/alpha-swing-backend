@@ -25,7 +25,7 @@
     "enabled": true,
     "triggered": true,
     "last_checked_price": 373.9,
-    "triggered_at": "2026-10-12 21:46:06 IST"
+    "triggered_at": "2026-10-12 21:46:51 IST"
   },
   {
     "alert_id": "ALT-INFY-SL",
@@ -39,6 +39,6 @@
     "enabled": true,
     "triggered": true,
     "last_checked_price": 1020.0,
-    "triggered_at": "2026-10-12 21:46:06 IST"
+    "triggered_at": "2026-10-12 21:46:51 IST"
   }
 ]
