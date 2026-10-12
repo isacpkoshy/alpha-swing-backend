@@ -2,7 +2,11 @@
 
 This document tracks all **Phase 1 (Completed MVP)** and **Phase 2 (Active Backlog)** User Stories across [`alpha-swing-backend`](https://github.com/isacpkoshy/alpha-swing-backend/issues) and [`alpha-swing-frontend`](https://github.com/isacpkoshy/alpha-swing-frontend/issues).
 
-> **Workflow Rule**: Reference the GitHub Issue ID in commits (e.g., `git commit -m "feat: add telegram bot alerts (Closes #6)"`) to automatically close the User Story upon push.
+> **Mandatory Git & PR Workflow Rule**:
+> 1. **Never push directly to `main`**.
+> 2. Create a dedicated feature branch per User Story (`git checkout -b feat/us-b6-telegram-alerts`).
+> 3. Commit with Conventional Commits referencing the issue (`feat(alerts): add Telegram webhook dispatcher (Closes #6)`).
+> 4. Push the branch (`git push -u origin feat/us-b6-telegram-alerts`) and open a **Pull Request** (`gh pr create`) targeting `main`.
 
 ---
 
