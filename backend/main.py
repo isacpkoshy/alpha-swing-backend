@@ -138,23 +138,89 @@ async def get_swing_setups(
     return cards
 
 
+@app.get("/api/v1/screener/live-quotes")
+async def get_live_nse_bse_quotes(
+    symbols: Optional[str] = Query(
+        default=None,
+        description="Optional comma-separated NSE/BSE symbols; defaults to full 40-stock universe",
+    ),
+) -> Dict[str, Any]:
+    """
+    Fetches real-time / latest EOD NSE (.NS) and BSE (.BO) quotes via yfinance in parallel
+    so the frontend Screener table always reflects exact market LTP, % change, 14D ATR, and Buy Trigger (`US-B12`).
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    import yfinance as yf
+
+    default_symbols = [
+        "CUMMINSIND", "HAL", "BSE", "TRENT", "POLYCAB", "M&M", "CDSL", "DIXON",
+        "SUNPHARMA", "ABB", "ICICIBANK", "BHARTIARTL", "LT", "SBIN", "RELIANCE",
+        "TATAMOTORS", "BAJFINANCE", "NTPC", "POWERGRID", "TITAN", "TCS", "INFY",
+        "PERSISTENT", "BEL", "MCX", "SIEMENS", "KAYNES", "KPITTECH", "MAZDOCK",
+        "COCHINSHIP", "ZOMATO", "LUPIN", "IREDA", "JYOTICNC", "NETWEB",
+        "WAAREEENER", "ANANTRAJ", "TARIL", "PGEL", "TITAGARH",
+    ]
+    target_list = (
+        [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        if symbols
+        else default_symbols
+    )
+    aliases = {"ZOMATO": "ETERNAL.NS", "TATAMOTORS": "TMPV.NS"}
+
+    def _fetch_one(sym: str):
+        try:
+            ticker_str = aliases.get(sym, f"{sym}.NS")
+            df = yf.Ticker(ticker_str).history(period="3mo", interval="1d")
+            if df is None or df.empty or len(df) < 10:
+                df = yf.Ticker(f"{sym}.BO").history(period="3mo", interval="1d")
+            if df is None or df.empty or len(df) < 5:
+                return sym, None
+            close = round(float(df["Close"].iloc[-1]), 2)
+            prev = float(df["Close"].iloc[-2]) if len(df) >= 2 else close
+            chg = round(((close - prev) / prev) * 100.0, 2)
+            atr = round(float((df["High"] - df["Low"]).tail(14).mean()), 2)
+            atr_pct = round((atr / close) * 100.0, 2)
+            high_10 = round(float(df["High"].tail(10).max()), 2)
+            trigger = high_10 if high_10 > close else round(close * 1.005, 2)
+            return sym, {
+                "price": close,
+                "change": chg,
+                "atr": atr,
+                "atrPct": atr_pct,
+                "trigger": trigger,
+            }
+        except Exception:
+            return sym, None
+
+    t0 = time.perf_counter()
+    quotes: Dict[str, Any] = {}
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        for sym, data in pool.map(_fetch_one, target_list):
+            if data:
+                quotes[sym] = data
+
+    return {
+        "status": "live",
+        "count": len(quotes),
+        "elapsed_ms": round((time.perf_counter() - t0) * 1000.0, 1),
+        "quotes": quotes,
+    }
+
+
 @app.post("/api/v1/screener/sync-live")
 async def sync_live_nse_universe(
-    exchange: str = Query(default="NSE"),
+    exchange: str = Query(default="ALL"),
     provider_id: str = Query(default="free_nse"),
 ):
-    """Concurrently syncs live NSE prices across all universe tickers using an 8-worker thread pool and caches in SQLite WAL."""
+    """Concurrently syncs live NSE & BSE prices across all universe tickers and returns live quote map."""
     t0 = time.perf_counter()
-    provider = DataProviderRegistry.get_provider(provider_id)
-    if hasattr(provider, "sync_live_universe_parallel"):
-        result = provider.sync_live_universe_parallel(exchange_id=exchange)
-    else:
-        result = {"total_symbols": 0, "live_synced": 0}
+    live_payload = await get_live_nse_bse_quotes()
     elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 1)
     return {
         "status": "synced",
         "elapsed_ms": elapsed_ms,
-        **result,
+        "live_synced": live_payload["count"],
+        "quotes": live_payload["quotes"],
         "cache_stats": wal_store.stats(),
     }
 
