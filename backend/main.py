@@ -346,3 +346,48 @@ async def analyze_portfolio(
         sync_source=sync_source,
         holdings=holdings,
     )
+
+
+# ============================================================================
+# ZERO-COST TELEGRAM & CLOUD BREAKOUT ALERT ENDPOINTS (US-B6 & US-B9)
+# ============================================================================
+from backend.engines.alert_engine import TelegramAlertEngine, PriceAlertRule
+
+alert_engine = TelegramAlertEngine()
+
+
+@app.get("/api/v1/alerts")
+async def list_price_alerts() -> Dict[str, Any]:
+    alerts = alert_engine.list_alerts()
+    return {"count": len(alerts), "alerts": [a.model_dump() for a in alerts]}
+
+
+@app.post("/api/v1/alerts")
+async def create_price_alert(rule: PriceAlertRule) -> Dict[str, Any]:
+    alerts = alert_engine.add_alert(rule)
+    return {"count": len(alerts), "alerts": [a.model_dump() for a in alerts]}
+
+
+@app.delete("/api/v1/alerts/{alert_id}")
+async def remove_price_alert(alert_id: str) -> Dict[str, Any]:
+    alerts = alert_engine.delete_alert(alert_id)
+    return {"count": len(alerts), "alerts": [a.model_dump() for a in alerts]}
+
+
+class EvaluateAlertsRequest(BaseModel):
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+
+@app.post("/api/v1/alerts/evaluate")
+async def evaluate_alerts_now(
+    req: Optional[EvaluateAlertsRequest] = None,
+    provider_id: str = Query(default="free_nse"),
+) -> Dict[str, Any]:
+    provider = DataProviderRegistry.get_provider(provider_id)
+    return await alert_engine.evaluate_active_alerts(
+        provider,
+        bot_token=req.telegram_bot_token if req else None,
+        chat_id=req.telegram_chat_id if req else None,
+    )
+

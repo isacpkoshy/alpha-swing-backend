@@ -1,0 +1,30 @@
+name: NSE Market-Hours Cloud Scanner & Telegram Alerts
+
+on:
+  schedule:
+    # Runs every 15 minutes from 03:45 UTC to 10:15 UTC (09:15 IST to 15:45 IST), Monday-Friday
+    - cron: "*/15 3-10 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  nse-alert-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Parallel NSE Scanner, Cloud Keep-Alive & Telegram Dispatcher
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CLOUD_BACKEND_URL: ${{ secrets.CLOUD_BACKEND_URL }}
+        run: python backend/jobs/cloud_alert_runner.py
