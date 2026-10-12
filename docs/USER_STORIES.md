@@ -22,9 +22,10 @@ This document tracks all **Phase 1 (Completed MVP)** and **Phase 2 (Active Backl
 | **US-B3** | [Issue #3](https://github.com/isacpkoshy/alpha-swing-backend/issues/3) — Sub-Millisecond SQLite3 WAL + 256MB mmap Cache | `epic:performance` | `P0` | Phase 1 MVP | ✅ **DONE** | `backend/adapters/storage/sqlite_store.py` |
 | **US-B4** | [Issue #4](https://github.com/isacpkoshy/alpha-swing-backend/issues/4) — Gemini 3.8 Flash AI Second-Opinion Synthesizer | `epic:ai-brain` | `P0` | Phase 1 MVP | ✅ **DONE** | `backend/engines/ai_brain.py` |
 | **US-B5** | [Issue #5](https://github.com/isacpkoshy/alpha-swing-backend/issues/5) — Portfolio Health, CSV Import & Macro Stress API | `epic:portfolio-risk` | `P0` | Phase 1 MVP | ✅ **DONE** | `backend/engines/portfolio_analyzer.py`, `backend/main.py` |
-| **US-B6** | [Issue #6](https://github.com/isacpkoshy/alpha-swing-backend/issues/6) — Zero-Cost Telegram Bot Breakout Alert Dispatcher | `epic:alerts` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`POST /api/v1/alerts`) |
+| **US-B6** | [Issue #6](https://github.com/isacpkoshy/alpha-swing-backend/issues/6) — Zero-Cost Telegram Bot Breakout Alert Dispatcher | `epic:alerts` | `P1` | Phase 2 Backlog | ✅ **DONE** | `backend/engines/alert_engine.py`, `POST /api/v1/alerts` |
 | **US-B7** | [Issue #7](https://github.com/isacpkoshy/alpha-swing-backend/issues/7) — Historical Swing Strategy Walk-Forward Backtester | `epic:quant-screener` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`backend/engines/backtester.py`) |
 | **US-B8** | [Issue #8](https://github.com/isacpkoshy/alpha-swing-backend/issues/8) — Official NSE Bhavcopy EOD Delivery % Scraper | `epic:market-data` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`free_nse_adapter.py`) |
+| **US-B9** | [Issue #10](https://github.com/isacpkoshy/alpha-swing-backend/issues/10) — Zero-Cost 24/7 Cloud Backend Deployment & Market-Hours Cron | `epic:performance` | `P0` | Phase 2 Backlog | ✅ **DONE** | `render.yaml`, `Dockerfile`, `.github/workflows/nse_cloud_cron.yml` |
 
 ---
 
@@ -41,5 +42,6 @@ This document tracks all **Phase 1 (Completed MVP)** and **Phase 2 (Active Backl
 | **US-F4** | [Issue #4](https://github.com/isacpkoshy/alpha-swing-frontend/issues/4) — Right Inspector: AI Concall Desk & Position Sizer | `epic:ai-brain` | `P0` | Phase 1 MVP | ✅ **DONE** | `index.html` (`renderAIInspector`, `recalculatePositionSize`) |
 | **US-F5** | [Issue #5](https://github.com/isacpkoshy/alpha-swing-frontend/issues/5) — Portfolio Audit, Zero-Cost CSV Importer & Stress Matrix | `epic:portfolio-risk` | `P0` | Phase 1 MVP | ✅ **DONE** | `index.html` (`importBrokerCsv`, `runStressTest`) |
 | **US-F6** | [Issue #6](https://github.com/isacpkoshy/alpha-swing-frontend/issues/6) — Custom Multi-Factor Screener Rule Builder Drawer | `epic:quant-screener` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`index.html` Filter Drawer) |
-| **US-F7** | [Issue #7](https://github.com/isacpkoshy/alpha-swing-frontend/issues/7) — One-Click Price Alert & Telegram Notification Modal | `epic:alerts` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`index.html` Alert Modal) |
+| **US-F7** | [Issue #7](https://github.com/isacpkoshy/alpha-swing-frontend/issues/7) — One-Click Price Alert & Telegram Notification Modal | `epic:alerts` | `P1` | Phase 2 Backlog | ✅ **DONE** | `index.html` (`toggleAlertsModal`, `createAlertLive`) |
 | **US-F8** | [Issue #8](https://github.com/isacpkoshy/alpha-swing-frontend/issues/8) — Strategy Backtest Tear-Sheet & Equity Curve Tab | `epic:chart-terminal` | `P1` | Phase 2 Backlog | 📋 **OPEN** | Planned (`index.html` Inspector Tab 3) |
+| **US-F9** | [Issue #10](https://github.com/isacpkoshy/alpha-swing-frontend/issues/10) — Zero-Cost 24/7 Cloud Terminal Hosting via GitHub Pages | `epic:chart-terminal` | `P0` | Phase 2 Backlog | ✅ **DONE** | `.github/workflows/deploy-pages.yml`, Cloud API Switcher |

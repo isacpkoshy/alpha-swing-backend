@@ -1,0 +1,44 @@
+[
+  {
+    "alert_id": "ALT-TRENT-01",
+    "symbol": "TRENT",
+    "exchange": "NSE",
+    "condition": "ABOVE_OR_EQUAL",
+    "alert_type": "ENTRY_PIVOT_BREAKOUT",
+    "target_price": 7245.0,
+    "stop_loss_price": 6967.5,
+    "notes": "VCP 3T Tight Base Breakout above \u20b97,245 with 62% NSE Delivery",
+    "enabled": true,
+    "triggered": false,
+    "last_checked_price": 2913.0,
+    "triggered_at": null
+  },
+  {
+    "alert_id": "ALT-BEL-02",
+    "symbol": "BEL",
+    "exchange": "NSE",
+    "condition": "ABOVE_OR_EQUAL",
+    "alert_type": "ENTRY_PIVOT_BREAKOUT",
+    "target_price": 312.5,
+    "stop_loss_price": 300.8,
+    "notes": "Stage-2 Pocket Pivot Defense Order Book Catalyst",
+    "enabled": true,
+    "triggered": true,
+    "last_checked_price": 373.9,
+    "triggered_at": "2026-10-12 21:46:06 IST"
+  },
+  {
+    "alert_id": "ALT-INFY-SL",
+    "symbol": "INFY",
+    "exchange": "NSE",
+    "condition": "BELOW_OR_EQUAL",
+    "alert_type": "STOP_LOSS_BREACH",
+    "target_price": 1825.0,
+    "stop_loss_price": 1790.0,
+    "notes": "50-DMA & Stop-Loss Guardrail Breach Warning",
+    "enabled": true,
+    "triggered": true,
+    "last_checked_price": 1020.0,
+    "triggered_at": "2026-10-12 21:46:06 IST"
+  }
+]
