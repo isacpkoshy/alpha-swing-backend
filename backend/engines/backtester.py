@@ -60,15 +60,17 @@ class WalkForwardBacktester:
     """Executes chronological walk-forward backtests on NSE daily OHLCV series."""
 
     UNIVERSE = [
-        "TRENT",
-        "BEL",
-        "POLYCAB",
-        "HAL",
-        "DIXON",
-        "CUMMINSIND",
-        "PERSISTENT",
-        "SUNPHARMA",
+        "CUMMINSIND", "HAL", "BSE", "TRENT", "POLYCAB", "M&M", "CDSL", "DIXON",
+        "SUNPHARMA", "ABB", "ICICIBANK", "BHARTIARTL", "LT", "SBIN", "RELIANCE",
+        "TATAMOTORS", "BAJFINANCE", "NTPC", "POWERGRID", "TITAN", "TCS", "INFY",
+        "PERSISTENT", "BEL", "MCX", "SIEMENS", "KAYNES", "KPITTECH", "MAZDOCK",
+        "COCHINSHIP", "ZOMATO", "LUPIN",
     ]
+
+    SYMBOL_ALIASES = {
+        "ZOMATO": "ETERNAL",
+        "TATAMOTORS": "TMPV",
+    }
 
     def __init__(self) -> None:
         self._cache: Dict[str, SymbolBacktestReport] = {}
@@ -248,7 +250,8 @@ class WalkForwardBacktester:
             import yfinance as yf
 
             suffix = ".BO" if exchange.upper() == "BSE" else ".NS"
-            df = yf.Ticker(f"{sym}{suffix}").history(period="3y", interval="1d")
+            yf_sym = self.SYMBOL_ALIASES.get(sym, sym)
+            df = yf.Ticker(f"{yf_sym}{suffix}").history(period="3y", interval="1d")
         except Exception:
             df = None
 
