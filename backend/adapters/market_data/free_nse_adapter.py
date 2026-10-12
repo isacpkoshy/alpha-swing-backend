@@ -406,57 +406,153 @@ class FreeNSEMarketDataProvider(MarketDataProvider):
                 },
             ],
         },
+        "MAZDOCK": {
+            "exchange": "BSE",
+            "scrip_code": "543237",
+            "name": "Mazagon Dock Shipbuilders Ltd",
+            "sector": "Defense Shipbuilding",
+            "industry": "Naval Warships & Submarines",
+            "market_cap_category": "MID_CAP",
+            "close": 4420.0,
+            "atr_14": 118.0,
+            "ema_20": 4315.0,
+            "sma_50": 4160.0,
+            "sma_200": 3480.0,
+            "rsi_14": 65.4,
+            "delivery_pct": 59.8,
+            "rel_volume_20d": 2.45,
+            "vcp_contraction_pct": 4.8,
+            "strategy_slug": "vcp-delivery-breakout",
+            "strategy_name": "BSE Defense VCP Breakout",
+            "fundamentals": {
+                "market_cap_cr": 89100.0,
+                "pe_ratio": 38.4,
+                "roe_pct": 34.6,
+                "roce_pct": 44.2,
+                "debt_to_equity": 0.0,
+                "sales_growth_yoy": 33.8,
+                "profit_growth_yoy": 48.2,
+                "promoter_holding_pct": 84.83,
+                "promoter_pledge_pct": 0.0,
+                "fii_holding_pct": 3.8,
+                "dii_holding_pct": 1.9,
+            },
+            "filings": [
+                {
+                    "type": "BSE_ANNOUNCEMENT",
+                    "title": "BSE Filing (543237): Project-75I Submarine & Next-Gen Destroyer Bid",
+                    "summary": "Cleared technical evaluation for ₹43,000 Cr Kalvari/P-75 follow-on submarine program; zero debt with ₹14,000+ Cr cash balance.",
+                },
+            ],
+        },
+        "IREDA": {
+            "exchange": "BSE",
+            "scrip_code": "544026",
+            "name": "Indian Renewable Energy Dev Agency",
+            "sector": "Green Energy Finance",
+            "industry": "Renewable Power NBFC",
+            "market_cap_category": "MID_CAP",
+            "close": 234.5,
+            "atr_14": 6.8,
+            "ema_20": 228.0,
+            "sma_50": 219.5,
+            "sma_200": 186.0,
+            "rsi_14": 63.1,
+            "delivery_pct": 57.2,
+            "rel_volume_20d": 2.15,
+            "vcp_contraction_pct": 5.3,
+            "strategy_slug": "stage-2-earnings-leader",
+            "strategy_name": "BSE Stage-2 Pocket Pivot",
+            "fundamentals": {
+                "market_cap_cr": 63000.0,
+                "pe_ratio": 39.2,
+                "roe_pct": 19.8,
+                "roce_pct": 11.4,
+                "debt_to_equity": 4.8,
+                "sales_growth_yoy": 36.4,
+                "profit_growth_yoy": 41.2,
+                "promoter_holding_pct": 75.0,
+                "promoter_pledge_pct": 0.0,
+                "fii_holding_pct": 2.9,
+                "dii_holding_pct": 4.2,
+            },
+            "filings": [
+                {
+                    "type": "BSE_ANNOUNCEMENT",
+                    "title": "BSE Filing (544026): Loan Sanctions Up 44% YoY to ₹17,860 Cr",
+                    "summary": "Solar and Green Hydrogen project disbursements accelerated with GNPA improving by 38 bps YoY.",
+                },
+            ],
+        },
     }
 
-    async def list_active_instruments(self, exchange_id: str = "NSE") -> List[Instrument]:
+    async def list_active_instruments(self, exchange_id: str = "ALL") -> List[Instrument]:
         instruments: List[Instrument] = []
         seen_symbols = set()
+        ex_filter = (exchange_id or "ALL").upper()
 
         for symbol, meta in self.CURATED_UNIVERSE.items():
-            seen_symbols.add(symbol)
+            inst_ex = meta.get("exchange", "NSE").upper()
+            if ex_filter not in ("ALL", "BOTH", "NSE_BSE") and inst_ex != ex_filter:
+                continue
+            seen_symbols.add(f"{inst_ex}:{symbol}")
+            suffix = ".BO" if inst_ex == "BSE" else ".NS"
             instruments.append(
                 Instrument(
                     symbol=symbol,
-                    exchange_id=exchange_id,
+                    exchange_id=inst_ex,
                     name=meta["name"],
                     asset_class=AssetClass.EQUITY,
                     sector=meta["sector"],
                     industry=meta["industry"],
                     market_cap_category=meta["market_cap_category"],
                     provider_mappings={
-                        "yfinance": f"{symbol}.NS",
+                        "yfinance": f"{symbol}{suffix}",
                         "nselib": symbol,
                     },
                 )
             )
 
-        # Also include any custom NSE symbols previously scanned and persisted in SQLite WAL
-        for cached in wal_store.get_all_cached_symbols(exchange_id):
-            sym = cached.get("symbol", "")
-            if sym and sym not in seen_symbols:
-                seen_symbols.add(sym)
-                instruments.append(
-                    Instrument(
-                        symbol=sym,
-                        exchange_id=exchange_id,
-                        name=cached.get("company_name", f"{sym} ({exchange_id})"),
-                        asset_class=AssetClass.EQUITY,
-                        sector=cached.get("sector", "NSE Equities"),
-                        industry="Live Scanned Scrip",
-                        market_cap_category="LARGE_MID_CAP",
-                        provider_mappings={"yfinance": f"{sym}.NS"},
+        target_exchanges = ["NSE", "BSE"] if ex_filter in ("ALL", "BOTH", "NSE_BSE") else [ex_filter]
+        for ex in target_exchanges:
+            for cached in wal_store.get_all_cached_symbols(ex):
+                sym = cached.get("symbol", "")
+                key = f"{ex}:{sym}"
+                if sym and key not in seen_symbols:
+                    seen_symbols.add(key)
+                    suffix = ".BO" if ex == "BSE" else ".NS"
+                    instruments.append(
+                        Instrument(
+                            symbol=sym,
+                            exchange_id=ex,
+                            name=cached.get("company_name", f"{sym} ({ex})"),
+                            asset_class=AssetClass.EQUITY,
+                            sector=cached.get("sector", f"{ex} Equities"),
+                            industry="Live Scanned Scrip",
+                            market_cap_category="LARGE_MID_CAP",
+                            provider_mappings={"yfinance": f"{sym}{suffix}"},
+                        )
                     )
-                )
 
         return instruments
 
     def _try_live_yfinance_bar(
         self, symbol: str, exchange_id: str = "NSE", force_refresh: bool = False
     ) -> Optional[OHLCVBar]:
-        """Pulls live EOD/intraday bars from Yahoo Finance (.NS / .BO), computes indicators, and caches in SQLite WAL."""
-        sym = symbol.upper().strip()
+        """Pulls live EOD/intraday bars from Yahoo Finance (.NS / .BO) with automatic NSE/BSE fallback, computes indicators, and caches in SQLite WAL."""
+        raw_sym = symbol.upper().strip()
+        explicit_ex = exchange_id.upper().strip() if exchange_id else "NSE"
+        if raw_sym.endswith(".BO"):
+            sym = raw_sym[:-3]
+            explicit_ex = "BSE"
+        elif raw_sym.endswith(".NS"):
+            sym = raw_sym[:-3]
+            explicit_ex = "NSE"
+        else:
+            sym = raw_sym
+
         if not force_refresh:
-            cached = wal_store.get_cached_bar(sym, exchange_id, ttl_seconds=900)
+            cached = wal_store.get_cached_bar(sym, explicit_ex if explicit_ex in ("NSE", "BSE") else "NSE", ttl_seconds=900)
             if cached:
                 return OHLCVBar(**{k: v for k, v in cached.items() if not k.startswith("_") and k not in ("symbol", "company_name", "sector")})
 
@@ -464,9 +560,22 @@ class FreeNSEMarketDataProvider(MarketDataProvider):
             import yfinance as yf
             import pandas as pd
 
-            suffix = ".BO" if exchange_id.upper() == "BSE" else ".NS"
-            yf_ticker = f"{sym}{suffix}"
-            df = yf.Ticker(yf_ticker).history(period="1y", interval="1d")
+            # Try requested exchange first, then fallback to the sister Indian exchange (.NS <-> .BO)
+            if explicit_ex == "BSE":
+                suffixes = [".BO", ".NS"]
+            elif explicit_ex in ("ALL", "BOTH", "AUTO"):
+                suffixes = [".NS", ".BO"]
+            else:
+                suffixes = [".NS", ".BO"]
+
+            df = None
+            for suffix in suffixes:
+                yf_ticker = f"{sym}{suffix}"
+                cand = yf.Ticker(yf_ticker).history(period="1y", interval="1d")
+                if cand is not None and not cand.empty and len(cand) >= 30:
+                    df = cand
+                    break
+
             if df is None or df.empty or len(df) < 30:
                 return None
 

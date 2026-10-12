@@ -392,8 +392,124 @@ async def evaluate_alerts_now(
     )
 
 
+class GenerateAIAlertsBatchRequest(BaseModel):
+    exchange: str = "ALL"  # "ALL" (NSE + BSE), "NSE", or "BSE"
+    min_ai_score: int = 75
+    symbols: Optional[List[str]] = None
+    persist_to_watchbook: bool = True
+    dispatch_telegram: bool = False
+    telegram_bot_token: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+
+@app.post("/api/v1/alerts/generate-ai-batch")
+async def generate_ai_alerts_for_nse_and_bse(
+    req: Optional[GenerateAIAlertsBatchRequest] = None,
+    provider_id: str = Query(default="free_nse"),
+) -> Dict[str, Any]:
+    """
+    Pan-Exchange (NSE + BSE) AI Alert Generator (`US-B11`):
+    Scans NSE (.NS) and BSE (.BO) stocks, runs the AI Second-Opinion Brain, and generates
+    actionable AI Entry Pivot, Stop-Loss (1.5x ATR), and 2R Target alerts with concall/BSE-filing catalysts.
+    """
+    params = req or GenerateAIAlertsBatchRequest()
+    provider = DataProviderRegistry.get_provider(provider_id)
+    screener = QuantScreenerEngine(provider)
+
+    exchange_mode = (params.exchange or "ALL").upper().strip()
+    cards: List[TradeSetupCard] = []
+
+    if params.symbols:
+        for raw_sym in params.symbols:
+            clean = raw_sym.upper().strip()
+            ex = "BSE" if clean.endswith(".BO") else ("NSE" if clean.endswith(".NS") else (exchange_mode if exchange_mode in ("NSE", "BSE") else "NSE"))
+            sym = clean.replace(".BO", "").replace(".NS", "")
+            inst = Instrument(
+                symbol=sym,
+                exchange_id=ex,
+                name=f"{sym} ({ex})",
+                asset_class=AssetClass.EQUITY,
+                sector=f"{ex} Equities",
+                industry="AI Alert Scanned Scrip",
+            )
+            try:
+                c = await screener.build_setup_card_for_instrument(inst, ex, atr_multiplier=1.5)
+                if c:
+                    cards.append(c)
+            except Exception:
+                continue
+    else:
+        cards = await screener.scan_universe(exchange_id=exchange_mode, atr_multiplier=1.5)
+
+    generated_alerts: List[Dict[str, Any]] = []
+    for card in cards:
+        ex = getattr(card, "exchange_id", None) or ("BSE" if card.symbol in ("MAZDOCK", "IREDA") else "NSE")
+        fundamentals = await provider.fetch_fundamentals(card.symbol, ex)
+        filings = await provider.fetch_concall_and_filings_context(card.symbol, ex)
+        memo = await ai_brain.generate_second_opinion(card, fundamentals, filings)
+        if memo.confidence_score < params.min_ai_score:
+            continue
+
+        is_bullish = memo.stance.upper() in ("BULLISH", "STRONG_BUY", "ACCUMULATE") or memo.confidence_score >= 82
+        condition = "ABOVE_OR_EQUAL" if is_bullish else "BELOW_OR_EQUAL"
+        alert_type = "AI_PIVOT_BREAKOUT" if is_bullish else "AI_STOP_LOSS_GUARDRAIL"
+        trigger_px = card.trade_plan.entry_price if is_bullish else card.trade_plan.stop_loss_price
+
+        rule = PriceAlertRule(
+            alert_id=f"AI-{ex}-{card.symbol}",
+            symbol=card.symbol,
+            exchange=ex,
+            condition=condition,
+            alert_type=alert_type,
+            target_price=trigger_px,
+            stop_loss_price=card.trade_plan.stop_loss_price,
+            notes=f"[🤖 {memo.stance} • {memo.confidence_score}/100] {memo.executive_summary[:140]}",
+        )
+        if params.persist_to_watchbook:
+            alert_engine.add_alert(rule)
+
+        generated_alerts.append(
+            {
+                "alert_id": rule.alert_id,
+                "symbol": card.symbol,
+                "exchange": ex,
+                "company_name": card.company_name,
+                "ltp": card.current_price,
+                "entry_pivot": card.trade_plan.entry_price,
+                "stop_loss": card.trade_plan.stop_loss_price,
+                "target_2r": card.trade_plan.target_1_price,
+                "ai_verdict": memo.stance,
+                "ai_score": memo.confidence_score,
+                "ai_catalyst": memo.bullish_catalysts[0] if memo.bullish_catalysts else memo.executive_summary,
+                "ai_risk": memo.risk_factors[0] if memo.risk_factors else "1.5x ATR Stop-Loss Invalidation",
+                "alert_type": alert_type,
+            }
+        )
+
+    telegram_result = None
+    if params.dispatch_telegram and generated_alerts:
+        lines = [f"🤖 *AlphaSwing AI Alert Digest ({exchange_mode} — {len(generated_alerts)} Setups)*"]
+        for item in generated_alerts[:12]:
+            lines.append(
+                f"• *{item['exchange']}:{item['symbol']}* (`🤖 {item['ai_verdict']} {item['ai_score']}`) — "
+                f"Pivot `₹{item['entry_pivot']:,.1f}` | Stop `₹{item['stop_loss']:,.1f}` | 2R `₹{item['target_2r']:,.1f}`"
+            )
+        telegram_result = alert_engine.send_telegram_notification(
+            "\n".join(lines),
+            bot_token=params.telegram_bot_token,
+            chat_id=params.telegram_chat_id,
+        )
+
+    return {
+        "exchange_scope": exchange_mode,
+        "generated_count": len(generated_alerts),
+        "generated_alerts": generated_alerts,
+        "telegram_dispatch": telegram_result,
+    }
+
+
 # ============================================================================
-# HISTORICAL 3-YEAR WALK-FORWARD BACKTESTER ENDPOINTS (US-B7)
+# HISTORICAL 3-YEAR WALK-FORWARD BACKTESTER ENDPOINTS (US-B7 & US-B10)
 # ============================================================================
 from backend.engines.backtester import WalkForwardBacktester, SymbolBacktestReport
 
@@ -416,5 +532,6 @@ async def get_universe_backtest_summary(
     atr_multiplier: float = Query(default=1.5),
 ) -> Dict[str, Any]:
     return backtester_engine.run_universe_summary(atr_multiplier=atr_multiplier)
+
 
 
