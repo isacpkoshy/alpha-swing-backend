@@ -391,3 +391,30 @@ async def evaluate_alerts_now(
         chat_id=req.telegram_chat_id if req else None,
     )
 
+
+# ============================================================================
+# HISTORICAL 3-YEAR WALK-FORWARD BACKTESTER ENDPOINTS (US-B7)
+# ============================================================================
+from backend.engines.backtester import WalkForwardBacktester, SymbolBacktestReport
+
+backtester_engine = WalkForwardBacktester()
+
+
+@app.get("/api/v1/screener/backtest/{symbol}", response_model=SymbolBacktestReport)
+async def get_symbol_backtest(
+    symbol: str,
+    exchange: str = Query(default="NSE"),
+    atr_multiplier: float = Query(default=1.5),
+) -> SymbolBacktestReport:
+    return backtester_engine.run_symbol_backtest(
+        symbol=symbol, exchange=exchange, atr_multiplier=atr_multiplier
+    )
+
+
+@app.get("/api/v1/screener/backtest-universe")
+async def get_universe_backtest_summary(
+    atr_multiplier: float = Query(default=1.5),
+) -> Dict[str, Any]:
+    return backtester_engine.run_universe_summary(atr_multiplier=atr_multiplier)
+
+
